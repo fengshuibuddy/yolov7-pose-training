@@ -41,7 +41,8 @@ logger = logging.getLogger(__name__)
 def train(hyp, opt, device, tb_writer=None):
     logger.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     save_dir, epochs, batch_size, total_batch_size, weights, rank, kpt_label = \
-        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank, opt.kpt_label
+        Path(
+            opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank, opt.kpt_label
 
     # Directories
     wdir = save_dir / 'weights'
@@ -121,13 +122,13 @@ def train(hyp, opt, device, tb_writer=None):
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
             pg1.append(v.weight)  # apply decay
         if hasattr(v, 'im'):
-            if hasattr(v.im, 'implicit'):           
+            if hasattr(v.im, 'implicit'):
                 pg0.append(v.im.implicit)
             else:
                 for iv in v.im:
                     pg0.append(iv.implicit)
         if hasattr(v, 'ia'):
-            if hasattr(v.ia, 'implicit'):           
+            if hasattr(v.ia, 'implicit'):
                 pg0.append(v.ia.implicit)
             else:
                 for iv in v.ia:
@@ -201,13 +202,14 @@ def train(hyp, opt, device, tb_writer=None):
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
                                             hyp=hyp, augment=True, cache=opt.cache_images, rect=opt.rect, rank=rank,
                                             world_size=opt.world_size, workers=opt.workers,
-                                            image_weights=opt.image_weights, quad=opt.quad, prefix=colorstr('train: '), kpt_label=kpt_label)
+                                            image_weights=opt.image_weights, quad=opt.quad, prefix=colorstr('train: '),
+                                            kpt_label=kpt_label)
 
-    print(dataset.labels)
+    # print(dataset.labels)
 
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
 
-    print("MLC: ", mlc)
+    # print("MLC: ", mlc)
 
     nb = len(dataloader)  # number of batches
     assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1)
@@ -289,7 +291,8 @@ def train(hyp, opt, device, tb_writer=None):
         if rank != -1:
             dataloader.sampler.set_epoch(epoch)
         pbar = enumerate(dataloader)
-        logger.info(('\n' + '%10s' * 10) % ('Epoch', 'gpu_mem', 'box', 'obj', 'cls', 'kpt', 'kptv' ,'total', 'labels', 'img_size'))
+        logger.info(('\n' + '%10s' * 10) % (
+        'Epoch', 'gpu_mem', 'box', 'obj', 'cls', 'kpt', 'kptv', 'total', 'labels', 'img_size'))
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
@@ -350,7 +353,7 @@ def train(hyp, opt, device, tb_writer=None):
                 if plots and ni < 33:
                     f = save_dir / f'train_batch{ni}.jpg'  # filename
                     plot_images(imgs, targets, paths, f, kpt_label=kpt_label)
-                    #Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
+                    # Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
                     # if tb_writer:
                     #     tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
                     #     tb_writer.add_graph(torch.jit.trace(model, imgs, strict=False), [])  # add model graph
@@ -372,6 +375,9 @@ def train(hyp, opt, device, tb_writer=None):
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
                 wandb_logger.current_epoch = epoch + 1
+
+                print("Starting here")
+
                 results, maps, times = test.test(data_dict,
                                                  batch_size=batch_size * 2,
                                                  imgsz=imgsz_test,
@@ -386,11 +392,15 @@ def train(hyp, opt, device, tb_writer=None):
                                                  is_coco=is_coco,
                                                  kpt_label=kpt_label)
 
-            # Write
-            with open(results_file, 'a') as f:
-                f.write(s + '%10.4g' * 7 % results + '\n')  # append metrics, val_loss
-            if len(opt.name) and opt.bucket:
-                os.system('gsutil cp %s gs://%s/results/results%s.txt' % (results_file, opt.bucket, opt.name))
+                print("results: ", results)
+                print("maps: ", maps)
+                print("times: ", times)
+
+                # Write
+                with open(results_file, 'a') as f:
+                    f.write(s + '%10.4g' * 7 % results + '\n')  # append metrics, val_loss
+                if len(opt.name) and opt.bucket:
+                    os.system('gsutil cp %s gs://%s/results/results%s.txt' % (results_file, opt.bucket, opt.name))
 
             # Log
             tags = ['train/box_loss', 'train/obj_loss', 'train/cls_loss',  # train loss
